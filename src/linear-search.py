@@ -123,7 +123,7 @@ def plot_nn_points(selected_point_index:Point, nn_point_indices:IndicesArray, po
 
 
 def relative_distance_between_points(point_A:Point, point_B:Point) -> np.float64:
-    if point_A == point_B:
+    if (point_A == point_B).all():
         return 0
     diff = np.subtract(point_A, point_B)
     return np.sum( diff*diff )
@@ -140,7 +140,7 @@ def get_k_nn_of_point(point_index:int, k:int, sorted_indices_matrix:IndicesMatri
     interval_end = None if k==-1 else k+1
     return sorted_indices_matrix[point_index][1:interval_end]
 
-def calculate_distances_matrix(points:PointsArray) -> DistancesMatrix:
+def calculate_exact_distances_matrix(points:PointsArray) -> DistancesMatrix:
     # initialize infinite distances between all points
     num_points = len(points)
     distances_matrix = np.ones((num_points,num_points)) * np.inf
@@ -148,6 +148,17 @@ def calculate_distances_matrix(points:PointsArray) -> DistancesMatrix:
     for ind_A, point_A in enumerate(points):
         for ind_B, point_B in enumerate(points):
             distances_matrix[ind_A][ind_B] = exact_distance_between_points(point_A, point_B)
+
+    return distances_matrix
+
+def calculate_relative_distances_matrix(points:PointsArray) -> DistancesMatrix:
+    # initialize infinite distances between all points
+    num_points = len(points)
+    distances_matrix = np.ones((num_points,num_points)) * np.inf
+    
+    for ind_A, point_A in enumerate(points):
+        for ind_B, point_B in enumerate(points):
+            distances_matrix[ind_A][ind_B] = relative_distance_between_points(point_A, point_B)
 
     return distances_matrix
 
@@ -159,24 +170,35 @@ if __name__ == "__main__":
     points = create_random_3d_points(num_points, (-100,100))
     print_needed_time(f"create {num_points:_d} 3d points O(N)=N")
     
-    # calculate distances between all points and sort them
+    # calculate exact distances between all points and sort them
     t0()
-    distances_matrix = calculate_distances_matrix(points)
-    print_needed_time("calculate all distances between all points O(N)=N^2")
-    
+    exact_distances_matrix = calculate_exact_distances_matrix(points)
+    print_needed_time("calculate all exact distances between all points O(N)=N^2")
     t0()
-    sorted_indices_matrix = sort_distances_matrix(distances_matrix)
-    print_needed_time("sort all distances O(N)=N^2*log(N)")
+    sorted_exact_indices_matrix = sort_distances_matrix(exact_distances_matrix)
+    print_needed_time("sort all exact distances O(N)=N^2*log(N)")
+
+    # calculate relative distances between all points and sort them
+    t0()
+    relative_distances_matrix = calculate_relative_distances_matrix(points)
+    print_needed_time("calculate all relative distances between all points O(N)=N^2")
+    t0()
+    sorted_relative_indices_matrix = sort_distances_matrix(relative_distances_matrix)
+    print_needed_time("sort all relative distances O(N)=N^2*log(N)")
 
     # get k nearest neighbors (nn) of any selected point index s
     s=0; k=10
     t0()
-    nn_point_indices = get_k_nn_of_point(s, k, sorted_indices_matrix)
+    nn_exact_point_indices = get_k_nn_of_point(s, k, exact_distances_matrix)
+    nn_relative_point_indices = get_k_nn_of_point(s, k, relative_distances_matrix)
     print_needed_time(f"get {k} nearest neighbors of point {s} O(N)=1")
-        
+
+    print(nn_exact_point_indices)
+    print(nn_relative_point_indices)
+    
     # plot points
     t0()
-    plot_nn_points(s, nn_point_indices, points)
+    plot_nn_points(s, nn_exact_point_indices, points)
     print_needed_time("create plot")
     plt.show()
 
